@@ -85,10 +85,10 @@ class _DeleteAccountButtonState extends State<DeleteAccountButton> {
   void Function() pop<T>(BuildContext context, T result) =>
       () => Navigator.of(context).pop(result);
 
-  Future<void> _deleteAccount() async {
+  Future<void> _deleteAccount({bool skipConfirmation = false}) async {
     bool? confirmed = !widget.showDeleteConfirmationDialog;
 
-    if (!confirmed) {
+    if (!confirmed && !skipConfirmation) {
       final l = FirebaseUILocalizations.labelsOf(context);
 
       confirmed = await showCupertinoDialog<bool?>(
@@ -116,17 +116,16 @@ class _DeleteAccountButtonState extends State<DeleteAccountButton> {
       final user = auth.currentUser!;
       await auth.currentUser?.delete();
 
-      FirebaseUIAction.ofType<AccountDeletedAction>(context)?.callback(
+      FirebaseUIAction.ofType<AccountDeletedAction>(
         context,
-        user,
-      );
+      )?.callback(context, user);
       await FirebaseUIAuth.signOut(context: context, auth: auth);
     } on fba.FirebaseAuthException catch (err) {
       if (err.code == 'requires-recent-login') {
         if (widget.onSignInRequired != null) {
           final signedIn = await widget.onSignInRequired!();
           if (signedIn) {
-            await _deleteAccount();
+            await _deleteAccount(skipConfirmation: true);
           }
         }
       }
